@@ -1,364 +1,108 @@
-/* =========================================================
-   PRELOADER
-========================================================= */
-
-window.addEventListener("load", function () {
-
+document.addEventListener("DOMContentLoaded", () => {
     const preloader = document.getElementById("preloader");
-
-    setTimeout(function () {
-
-        preloader.classList.add("hide");
-
-    }, 800);
-
-});
-
-
-/* =========================================================
-   NAVBAR SCROLL EFFECT
-========================================================= */
-
-const navbar = document.getElementById("mainNavbar");
-
-window.addEventListener("scroll", function () {
-
-    if (window.scrollY > 50) {
-
-        navbar.classList.add("scrolled");
-
-    } else {
-
-        navbar.classList.remove("scrolled");
-
+    if (preloader) {
+        window.addEventListener("load", () => {
+            preloader.classList.add("hide");
+            window.setTimeout(() => {
+                preloader.style.display = "none";
+            }, 500);
+        }, { once: true });
+        // Avoid leaving the page behind the loader if the load event already fired.
+        if (document.readyState === "complete") {
+            preloader.classList.add("hide");
+            window.setTimeout(() => { preloader.style.display = "none"; }, 500);
+        }
     }
 
-});
+    const navbar = document.getElementById("mainNavbar");
+    const backToTop = document.getElementById("backToTop");
+    const updateScrollUI = () => {
+        const y = window.scrollY || document.documentElement.scrollTop;
+        if (navbar) navbar.classList.toggle("scrolled", y > 40);
+        if (backToTop) backToTop.classList.toggle("show", y > 450);
+    };
+    window.addEventListener("scroll", updateScrollUI, { passive: true });
+    updateScrollUI();
 
+    if (backToTop) {
+        backToTop.addEventListener("click", () => {
+            window.scrollTo({ top: 0, behavior: "smooth" });
+        });
+    }
 
-/* =========================================================
-   ACTIVE NAV LINK
-========================================================= */
-
-const sections = document.querySelectorAll("section[id]");
-
-const navLinks = document.querySelectorAll(".nav-link");
-
-window.addEventListener("scroll", function () {
-
-    let current = "";
-
-    sections.forEach(function (section) {
-
-        const sectionTop = section.offsetTop - 150;
-
-        const sectionHeight = section.offsetHeight;
-
-        if (
-            window.scrollY >= sectionTop &&
-            window.scrollY < sectionTop + sectionHeight
-        ) {
-
-            current = section.getAttribute("id");
-
-        }
-
-    });
-
-    navLinks.forEach(function (link) {
-
-        link.classList.remove("active");
-
-        if (link.getAttribute("href") === "#" + current) {
-
-            link.classList.add("active");
-
-        }
-
-    });
-
-});
-
-
-/* =========================================================
-   CLOSE MOBILE NAVBAR AFTER CLICK
-========================================================= */
-
-const navItems = document.querySelectorAll(".nav-link");
-
-const navbarMenu = document.getElementById("navbarMenu");
-
-navItems.forEach(function (item) {
-
-    item.addEventListener("click", function () {
-
-        if (window.innerWidth < 992) {
-
-            const collapse =
-                bootstrap.Collapse.getInstance(navbarMenu);
-
-            if (collapse) {
-
-                collapse.hide();
-
-            }
-
-        }
-
-    });
-
-});
-
-
-/* =========================================================
-   SCROLL REVEAL
-========================================================= */
-
-const revealElements =
-    document.querySelectorAll(".reveal");
-
-const revealObserver =
-    new IntersectionObserver(
-
-        function (entries) {
-
-            entries.forEach(function (entry) {
-
+    const revealElements = document.querySelectorAll(".reveal");
+    if ("IntersectionObserver" in window) {
+        const revealObserver = new IntersectionObserver((entries, observer) => {
+            entries.forEach(entry => {
                 if (entry.isIntersecting) {
-
                     entry.target.classList.add("active");
-
-                    revealObserver.unobserve(entry.target);
-
+                    observer.unobserve(entry.target);
                 }
-
             });
-
-        },
-
-        {
-            threshold: 0.12
-        }
-
-    );
-
-
-revealElements.forEach(function (element) {
-
-    revealObserver.observe(element);
-
-});
-
-
-/* =========================================================
-   BACK TO TOP
-========================================================= */
-
-const backToTop =
-    document.getElementById("backToTop");
-
-window.addEventListener("scroll", function () {
-
-    if (window.scrollY > 600) {
-
-        backToTop.classList.add("show");
-
+        }, { threshold: 0.12 });
+        revealElements.forEach(element => revealObserver.observe(element));
     } else {
-
-        backToTop.classList.remove("show");
-
+        revealElements.forEach(element => element.classList.add("active"));
     }
 
-});
-
-
-backToTop.addEventListener("click", function () {
-
-    window.scrollTo({
-
-        top: 0,
-
-        behavior: "smooth"
-
-    });
-
-});
-
-
-/* =========================================================
-   CONTACT FORM
-========================================================= */
-
-const contactForm =
-    document.getElementById("contactForm");
-
-const formMessage =
-    document.getElementById("formMessage");
-
-
-contactForm.addEventListener("submit", function (event) {
-
-    event.preventDefault();
-
-    const name =
-        document.getElementById("name").value.trim();
-
-    const email =
-        document.getElementById("email").value.trim();
-
-    const message =
-        document.getElementById("message").value.trim();
-
-
-    if (
-        name === "" ||
-        email === "" ||
-        message === ""
-    ) {
-
-        formMessage.textContent =
-            "Please fill in all fields.";
-
-        return;
-
+    // Close the mobile navigation after choosing a section.
+    const navMenu = document.getElementById("navbarMenu");
+    if (navMenu && window.bootstrap) {
+        navMenu.querySelectorAll(".nav-link, .nav-contact").forEach(link => {
+            link.addEventListener("click", () => {
+                if (navMenu.classList.contains("show")) {
+                    window.bootstrap.Collapse.getOrCreateInstance(navMenu).hide();
+                }
+            });
+        });
     }
 
+    // Contact form: sends the form to FormSubmit via AJAX instead of showing a fake success.
+    const contactForm = document.getElementById("contactForm");
+    const formMessage = document.getElementById("formMessage");
+    const submitButton = contactForm?.querySelector('button[type="submit"]');
 
-    formMessage.textContent =
-        "Thanks! Your message has been prepared.";
+    if (contactForm && formMessage && submitButton) {
+        contactForm.addEventListener("submit", async event => {
+            event.preventDefault();
+            const name = document.getElementById("name")?.value.trim() || "";
+            const email = document.getElementById("email")?.value.trim() || "";
+            const message = document.getElementById("message")?.value.trim() || "";
 
-    contactForm.reset();
-
-});
-
-
-/* =========================================================
-   HERO CODE TYPING EFFECT
-========================================================= */
-
-const cursor =
-    document.querySelector(".typing-cursor");
-
-let cursorVisible = true;
-
-setInterval(function () {
-
-    if (cursor) {
-
-        cursorVisible = !cursorVisible;
-
-        cursor.style.opacity =
-            cursorVisible ? "1" : "0";
-
-    }
-
-}, 500);
-
-
-/* =========================================================
-   PROJECT HOVER EFFECT
-========================================================= */
-
-const projectItems =
-    document.querySelectorAll(".project-item");
-
-projectItems.forEach(function (project) {
-
-    project.addEventListener("mouseenter", function () {
-
-        const image =
-            project.querySelector(".project-image");
-
-        if (image) {
-
-            image.style.transition =
-                "transform 0.5s ease";
-
-        }
-
-    });
-
-});
-
-
-/* =========================================================
-   MOUSE PARALLAX HERO
-========================================================= */
-
-const heroVisual =
-    document.querySelector(".hero-visual");
-
-if (heroVisual && window.innerWidth > 991) {
-
-    heroVisual.addEventListener(
-        "mousemove",
-        function (event) {
-
-            const rect =
-                heroVisual.getBoundingClientRect();
-
-            const x =
-                event.clientX - rect.left;
-
-            const y =
-                event.clientY - rect.top;
-
-            const rotateY =
-                ((x / rect.width) - 0.5) * 6;
-
-            const rotateX =
-                ((y / rect.height) - 0.5) * -6;
-
-
-            const codeWindow =
-                heroVisual.querySelector(".code-window");
-
-            if (codeWindow) {
-
-                codeWindow.style.transform =
-                    `perspective(1000px)
-                     rotateX(${rotateX}deg)
-                     rotateY(${rotateY}deg)`;
-
+            if (!name || !email || !message) {
+                formMessage.textContent = "Please fill in all fields.";
+                return;
+            }
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                formMessage.textContent = "Please enter a valid email address.";
+                return;
             }
 
-        }
-    );
+            const originalButtonHTML = submitButton.innerHTML;
+            submitButton.disabled = true;
+            submitButton.textContent = "Sending...";
+            formMessage.textContent = "";
 
-
-    heroVisual.addEventListener(
-        "mouseleave",
-        function () {
-
-            const codeWindow =
-                heroVisual.querySelector(".code-window");
-
-            if (codeWindow) {
-
-                codeWindow.style.transform =
-                    "perspective(1000px) rotateY(-5deg)";
-
+            try {
+                const response = await fetch(contactForm.action, {
+                    method: "POST",
+                    body: new FormData(contactForm),
+                    headers: { Accept: "application/json" }
+                });
+                let result = {};
+                try { result = await response.json(); } catch (_) { /* response may be empty */ }
+                if (!response.ok || result.success === false || result.success === "false") {
+                    throw new Error(result.message || "The form service did not accept the message.");
+                }
+                formMessage.textContent = "Message submitted successfully! Thank you for contacting me.";
+                contactForm.reset();
+            } catch (error) {
+                console.error("Contact form submission failed:", error);
+                formMessage.textContent = "Sorry, your message could not be sent. Please email me directly at ragul12905@gmail.com.";
+            } finally {
+                submitButton.disabled = false;
+                submitButton.innerHTML = originalButtonHTML;
             }
-
-        }
-    );
-
-}
-
-
-/* =========================================================
-   CURRENT YEAR
-========================================================= */
-
-const currentYear =
-    document.querySelector(".footer-bottom span");
-
-if (currentYear) {
-
-    const year =
-        new Date().getFullYear();
-
-    currentYear.innerHTML =
-        `© ${year} Ragul B. All rights reserved.`;
-
-}
+        });
+    }
+});
